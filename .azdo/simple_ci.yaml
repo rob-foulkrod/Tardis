@@ -10,77 +10,119 @@ variables:
 - name: BuildConfiguration
   value: 'Release'
 
-jobs:
-  - job: source
-    displayName: Source (Lint)
-    pool:
-      name: Robslaptop
-    steps:
-      - checkout: self
-        fetchDepth: 1
-      - task: DotNetCoreCLI@2
-        displayName: Restore
-        inputs:
-          command: restore
-          projects: $(BuildParameters.RestoreBuildProjects)
-      - task: DotNetCoreCLI@2
-        displayName: Lint (StyleCop)
-        inputs:
-          command: build
-          projects: $(BuildParameters.RestoreBuildProjects)
-          arguments: --configuration $(BuildConfiguration) /p:RunAnalyzers=true
+stages:
+  - stage: CI
+    displayName: Build, Lint, Test, and Package
+    jobs:
+      - job: source
+        displayName: Source (Lint)
+        pool:
+          name: Robslaptop
+        steps:
+          - checkout: self
+            fetchDepth: 1
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: restore
+              projects: $(BuildParameters.RestoreBuildProjects)
+          - task: DotNetCoreCLI@2
+            displayName: Lint (StyleCop)
+            inputs:
+              command: build
+              projects: $(BuildParameters.RestoreBuildProjects)
+              arguments: --configuration $(BuildConfiguration) /p:RunAnalyzers=true
 
-  - job: validation
-    displayName: Validation (Test)
-    dependsOn: source
-    pool:
-      name: Robslaptop
-    steps:
-      - checkout: self
-        fetchDepth: 1
-      - task: DotNetCoreCLI@2
-        displayName: Restore
-        inputs:
-          command: restore
-          projects: $(BuildParameters.RestoreBuildProjects)
-      - powershell: |
-          $path = Join-Path "$(Build.SourcesDirectory)" "TestResults\Coverage"
-          if (-not (Test-Path $path)) { New-Item -ItemType Directory -Force -Path $path | Out-Null }
-        displayName: Ensure coverage folder exists
-      - task: DotNetCoreCLI@2
-        displayName: Test with Coverage
-        inputs:
-          command: test
-          projects: $(BuildParameters.TestProjects)
-          publishTestResults: false
-          arguments: >-
-            --configuration $(BuildConfiguration)
-            --logger trx
-            --results-directory $(Agent.TempDirectory)/TestResults
-            /p:CollectCoverage=true
-            /p:CoverletOutputFormat=cobertura
-            /p:CoverletOutput=$(Build.SourcesDirectory)\\TestResults\\Coverage\\coverage
-            /p:Threshold=35
-            /p:ThresholdType=line
+      - job: validation
+        displayName: Validation (Test)
+        dependsOn: source
+        pool:
+          name: Robslaptop
+        steps:
+          - checkout: self
+            fetchDepth: 1
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: restore
+              projects: $(BuildParameters.RestoreBuildProjects)
+          - powershell: |
+              $path = Join-Path "$(Build.SourcesDirectory)" "TestResults\Coverage"
+              if (-not (Test-Path $path)) { New-Item -ItemType Directory -Force -Path $path | Out-Null }
+            displayName: Ensure coverage folder exists
+          - task: DotNetCoreCLI@2
+            displayName: Test with Coverage
+            inputs:
+              command: test
+              projects: $(BuildParameters.TestProjects)
+              publishTestResults: false
+              arguments: >-
+                --configuration $(BuildConfiguration)
+                --logger trx
+                --results-directory $(Agent.TempDirectory)/TestResults
+                /p:CollectCoverage=true
+                /p:CoverletOutputFormat=cobertura
+                /p:CoverletOutput=$(Build.SourcesDirectory)\\TestResults\\Coverage\\coverage
+                /p:Threshold=35
+                /p:ThresholdType=line
 
-      - task: PublishTestResults@2
-        displayName: 'Publish test results'
-        condition: succeededOrFailed()
-        inputs:
-          testResultsFormat: 'VSTest'
-          testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
-          mergeTestResults: true
-          failTaskOnFailedTests: true
-      - task: PublishCodeCoverageResults@1
-        displayName: 'Publish Code Coverage Results'
-        inputs:
-          codeCoverageTool: 'Cobertura'
-          summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/Coverage/coverage.cobertura.xml'
-          reportDirectory: '$(Build.SourcesDirectory)/TestResults/Coverage'
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Artifact
-        condition: succeededOrFailed()
-        inputs:
-          PathtoPublish: $(build.artifactstagingdirectory)
-          TargetPath: '\\my\share\$(Build.DefinitionName)\$(Build.BuildNumber)'
+          - task: PublishTestResults@2
+            displayName: 'Publish test results'
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'VSTest'
+              testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+              mergeTestResults: true
+              failTaskOnFailedTests: true
+          - task: PublishCodeCoverageResults@1
+            displayName: 'Publish Code Coverage Results'
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/Coverage/coverage.cobertura.xml'
+              reportDirectory: '$(Build.SourcesDirectory)/TestResults/Coverage'
+
+          # Publish the web app for deployment
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish Web App'
+            inputs:
+              command: 'publish'
+              projects: 'src/Tardis.Web/Tardis.Web.csproj'
+              arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/webapp'
+
+          # Publish artifact so the Deploy stage can consume it
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact (drop)'
+            condition: succeededOrFailed()
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              TargetPath: '\\my\share\$(Build.DefinitionName)\$(Build.BuildNumber)'
+
+  - stage: Deploy
+    displayName: Deploy to Production
+    dependsOn: CI
+    jobs:
+      - deployment: deploy_webapp
+        displayName: 'Deploy Tardis Web App (Production)'
+        pool:
+          name: Robslaptop
+        environment: 'tardis-production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # Download the artifact produced in the CI stage
+                - download: current
+                  artifact: drop
+
+                # Deploy to Azure Web App (Production slot)
+                - task: AzureWebApp@1
+                  displayName: 'Deploy to Azure Web App: tardis'
+                  inputs:
+                    azureSubscription: 'basiccon'
+                    appType: 'webApp'
+                    appName: 'tardis'
+                    resourceGroupName: 'tardis_azdo'
+                    slotName: 'production'
+                    package: '$(Pipeline.Workspace)/drop/webapp'
 ...
