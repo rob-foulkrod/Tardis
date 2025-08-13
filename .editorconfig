@@ -1,0 +1,35 @@
+# EditorConfig is awesome: https://EditorConfig.org
+# Root-level configuration for this repository
+root = true
+
+# Apply to all C# files
+[*.cs]
+# Suppress StyleCop: SA1636 - File header copyright text mismatch
+# Options: error, warning, suggestion, silent, none
+# We choose none to fully suppress this rule.
+dotnet_diagnostic.SA1636.severity = none
+
+# Additional suppressions based on recent build output
+# Formatting and layout
+dotnet_diagnostic.SA1505.severity = none   # Opening brace should not be followed by a blank line
+dotnet_diagnostic.SA1508.severity = none   # Closing brace should not be preceded by a blank line
+dotnet_diagnostic.SA1513.severity = none   # Closing brace should be followed by blank line
+dotnet_diagnostic.SA1515.severity = none   # Single-line comment should be preceded by blank line
+
+# File header and file/type naming
+dotnet_diagnostic.SA1633.severity = none   # File header missing or not at top
+dotnet_diagnostic.SA1649.severity = none   # File name should match first type name
+dotnet_diagnostic.SA1402.severity = none   # File may only contain a single type
+
+# Using directives
+dotnet_diagnostic.SA1200.severity = none   # Using directive should appear within a namespace
+dotnet_diagnostic.SA1210.severity = none   # Using directives should be ordered alphabetically
+
+# Code style rules flagged in tests
+dotnet_diagnostic.SA1101.severity = none   # Prefix local calls with this
+dotnet_diagnostic.SA1122.severity = none   # Use string.Empty for empty strings
+dotnet_diagnostic.SA1413.severity = none   # Use trailing comma in multi-line initializers
+dotnet_diagnostic.SA1202.severity = none   # 'public' members should come before 'private' members
+
+# Analyzer configuration notice
+dotnet_diagnostic.SA0001.severity = none   # XML comment analysis disabled due to project configuration

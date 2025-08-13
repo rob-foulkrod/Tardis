@@ -36,7 +36,7 @@ namespace Tardis.Web.Tests
         [Fact]
         public void Error_Returns_ViewResult_With_ErrorViewModel_TraceIdentifier()
         {
-            var controller = CreateController();
+            var controller = this.CreateController();
             var httpContext = new DefaultHttpContext();
             httpContext.TraceIdentifier = "trace-123";
             controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
@@ -50,26 +50,26 @@ namespace Tardis.Web.Tests
         [Fact]
         public void Error_Returns_ViewResult_With_ErrorViewModel_ActivityNull()
         {
-            var controller = CreateController();
+            var controller = this.CreateController();
             var httpContext = new DefaultHttpContext();
-            httpContext.TraceIdentifier = "";
+            httpContext.TraceIdentifier = string.Empty;
             controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
             var result = controller.Error();
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsType<Tardis.Web.Models.ErrorViewModel>(viewResult.Model);
-            Assert.Equal("", model.RequestId);
+            Assert.Equal(string.Empty, model.RequestId);
             Assert.False(model.ShowRequestId);
         }
 
         [Fact]
         public void Error_Returns_ViewResult_With_ErrorViewModel_NoHttpContext()
         {
-            var controller = CreateController();
+            var controller = this.CreateController();
             // No HttpContext set
             var result = controller.Error();
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsType<Tardis.Web.Models.ErrorViewModel>(viewResult.Model);
-            Assert.True(model.RequestId == null || model.RequestId == "");
+            Assert.True(model.RequestId == null || model.RequestId == string.Empty);
         }
     }
 

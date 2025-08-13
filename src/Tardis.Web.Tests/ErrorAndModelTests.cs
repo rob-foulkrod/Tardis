@@ -38,7 +38,7 @@ namespace Tardis.Web.Tests
             httpContext.TraceIdentifier = "test-trace-id";
             controller.ControllerContext = new ControllerContext
             {
-                HttpContext = httpContext
+                HttpContext = httpContext,
             };
 
             var result = controller.Error();
