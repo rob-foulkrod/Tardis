@@ -1,0 +1,120 @@
+# Workflow: CI and Deploy for Tardis (.NET 9)
+#
+# Required GitHub Secrets (for Azure OIDC login):
+# - AZURE_CLIENT_ID        # Microsoft Entra app registration (federated credentials for this repo/workflow)
+# - AZURE_TENANT_ID        # Your tenant ID
+# - AZURE_SUBSCRIPTION_ID  # Subscription that contains the Web App
+#
+# Optional (if you prefer to parameterize instead of hardcoding):
+# - AZURE_WEBAPP_NAME      # e.g., tardis
+# - AZURE_WEBAPP_SLOT      # e.g., production
+
+name: defaultPipeline
+
+on:
+  push:
+    branches: [ main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write  # required for OIDC with azure/login
+
+env:
+  BUILD_CONFIGURATION: Release
+  DOTNET_NOLOGO: true
+
+jobs:
+  build_test:
+    name: Build, Lint, Test, and Package
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore "src/Tardis.sln"
+
+      - name: Lint (StyleCop analyzers)
+        run: dotnet build "src/Tardis.sln" --configuration $env:BUILD_CONFIGURATION /p:RunAnalyzers=true
+
+      - name: Test with Coverage (Coverlet)
+        run: >
+          dotnet test "src/Tardis.sln"
+          --configuration $env:BUILD_CONFIGURATION
+          --logger "trx;LogFileName=tests.trx"
+          --results-directory "$env:RUNNER_TEMP/TestResults"
+          /p:CollectCoverage=true
+          /p:CoverletOutputFormat=cobertura
+          /p:CoverletOutput="$env:GITHUB_WORKSPACE/TestResults/Coverage/coverage"
+          /p:Threshold=35
+          /p:ThresholdType=line
+
+      - name: Upload test results (TRX)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ runner.temp }}/TestResults/**/*.trx
+          if-no-files-found: warn
+
+      - name: Upload code coverage (Cobertura)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: |
+            TestResults/Coverage/coverage.cobertura.xml
+            TestResults/Coverage/**
+          if-no-files-found: warn
+
+      - name: Publish Web App (dotnet publish)
+        run: dotnet publish "src/Tardis.Web/Tardis.Web.csproj" --configuration $env:BUILD_CONFIGURATION --output "${{ runner.temp }}/webapp"
+
+      - name: Upload build artifact (drop)
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop
+          path: ${{ runner.temp }}/webapp
+
+  deploy:
+    name: Deploy to Production
+    needs: build_test
+    runs-on: windows-latest
+    environment:
+      name: tardis-production
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: drop
+          path: webapp
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Web App (production)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: tardis-gh # or use: ${{ secrets.AZURE_WEBAPP_NAME }}
+          slot-name: production # or use: ${{ secrets.AZURE_WEBAPP_SLOT }}
+          package: webapp

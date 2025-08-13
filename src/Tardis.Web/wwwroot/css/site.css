@@ -29,3 +29,49 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* --- TARDIS Theme ------------------------------------------------------- */
+:root {
+  --tardis-dark-blue: #1e3a5f; /* deep blue from logo */
+  --tardis-purple: #5b4a8a;    /* purple from logo */
+  --tardis-teal: #4a9da6;      /* teal from logo */
+  --tardis-light: #e6f2f3;     /* light accent */
+  --tardis-cream: #f8f4ef;     /* background neutral */
+}
+
+.navbar.tardis-navbar {
+  background: linear-gradient(90deg, var(--tardis-dark-blue) 0%, var(--tardis-purple) 100%) !important;
+}
+.navbar.tardis-navbar .navbar-brand,
+.navbar.tardis-navbar .nav-link {
+  color: #fff !important;
+}
+.navbar.tardis-navbar .nav-link:hover {
+  color: var(--tardis-teal) !important;
+}
+
+.hero-section {
+  background: linear-gradient(135deg, var(--tardis-dark-blue) 0%, var(--tardis-purple) 50%, var(--tardis-teal) 100%);
+  padding: 80px 0;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.logo-container { margin-bottom: 40px; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+.logo-img { width: 200px; height: 200px; filter: drop-shadow(0 10px 20px rgba(0,0,0,.3)); }
+.main-title { font-size: 3rem; font-weight: 700; margin-bottom: 16px; text-shadow: 0 2px 4px rgba(0,0,0,.3); }
+.subtitle { font-size: 1.2rem; color: var(--tardis-light); margin-bottom: 28px; }
+.cta-button { background: var(--tardis-teal); color:#fff; padding: 12px 28px; border-radius: 999px; text-decoration:none; display:inline-block; transition: .2s ease; box-shadow:0 4px 15px rgba(74,157,166,.35); }
+.cta-button:hover { background: var(--tardis-purple); color:#fff; transform: translateY(-2px); }
+
+.features-section { padding: 60px 0; background: var(--tardis-cream); }
+.feature-card { background:#fff; border-radius:16px; padding:24px; box-shadow:0 6px 18px rgba(0,0,0,.08); border-top:4px solid var(--tardis-purple); transition: transform .2s ease, box-shadow .2s ease; }
+.feature-card:hover { transform: translateY(-4px); box-shadow:0 10px 28px rgba(0,0,0,.12); }
+.feature-icon { width:60px; height:60px; border-radius:50%; margin:0 auto 14px; display:flex; align-items:center; justify-content:center; color:#fff; background: linear-gradient(135deg, var(--tardis-dark-blue), var(--tardis-teal)); font-size:24px; }
+.feature-title { color: var(--tardis-dark-blue); font-size:1.25rem; margin-bottom:8px; }
+.feature-description { color:#555; }
+
+/* Buttons theme alignment */
+.btn-primary { background-color: var(--tardis-purple); border-color: var(--tardis-purple); }
+.btn-primary:hover { background-color: var(--tardis-teal); border-color: var(--tardis-teal); }
