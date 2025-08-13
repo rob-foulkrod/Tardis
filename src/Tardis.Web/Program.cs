@@ -24,6 +24,9 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+// Map attribute-routed controllers (e.g., /health)
+app.MapControllers();
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
