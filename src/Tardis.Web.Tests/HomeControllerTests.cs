@@ -34,6 +34,15 @@ namespace Tardis.Web.Tests
         }
 
         [Fact]
+        public void About_Returns_ViewResult()
+        {
+            var controller = CreateController();
+            var result = controller.About();
+            Assert.NotNull(result);
+            Assert.IsType<ViewResult>(result);
+        }
+
+        [Fact]
         public void Error_Returns_ViewResult_With_ErrorViewModel_TraceIdentifier()
         {
             var controller = this.CreateController();
