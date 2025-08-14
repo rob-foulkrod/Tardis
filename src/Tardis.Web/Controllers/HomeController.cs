@@ -8,7 +8,7 @@ namespace Tardis.Web.Controllers
     using Tardis.Web.Models;
 
     /// <summary>
-    /// Controller for home and privacy pages.
+    /// Controller for home, about, and privacy pages.
     /// </summary>
     public class HomeController : Controller
     {
@@ -37,6 +37,15 @@ namespace Tardis.Web.Controllers
         /// </summary>
         /// <returns>The Privacy view.</returns>
         public IActionResult Privacy()
+        {
+            return this.View();
+        }
+
+        /// <summary>
+        /// Returns the About view.
+        /// </summary>
+        /// <returns>The About view.</returns>
+        public IActionResult About()
         {
             return this.View();
         }
